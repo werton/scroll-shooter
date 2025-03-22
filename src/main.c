@@ -5,8 +5,9 @@
 #define PLAYER_SPEED                    2
 #define BULLET_OFFSET_X                 8
 #define ENEMY_SPEED                     1
-#define MAX_BULLETS                     10
+#define MAX_BULLETS                     6
 #define MAX_ENEMIES                     10
+#define MAX_EXPLOSION                   4
 #define SCREEN_WIDTH                    320
 #define SCREEN_HEIGHT                   224
 #define OBJECT_SIZE                     16
@@ -17,7 +18,7 @@
 #define RANDOM_MAX                      100       // Maximum value for random number generation
 #define FIRE_RATE                       20         // Delay between shots (in frames)
 
-#define FOREACH_OBJECT_IN_POOL(object, pool)                                                    \
+#define FOREACH_ALLOCATED_IN_POOL(object, pool)                                                    \
     u16 object##_##objectsNum = POOL_getNumAllocated(pool);                                     \
     GameObject **object##_##FirstPtr = (GameObject **) POOL_getFirst(pool);                     \
     GameObject *object = *object##_##FirstPtr;                                                  \
@@ -60,7 +61,7 @@ typedef struct
 // Pools for bullets and enemies
 Pool *bulletPool;
 Pool *enemyPool;
-//Map *map;
+Pool *explosionPool;
 
 GameState gameState = {
     .scrollRules =
@@ -88,6 +89,8 @@ void UpdatePlayer();
 
 void UpdateBullets();
 
+void UpdateExplosions();
+
 void UpdateEnemies();
 
 void SpawnEnemy();
@@ -102,8 +105,13 @@ void TryShootBullet();
 
 void InitObjectsPools();
 
-void ScrollMap();
+void ShootBullet(GameObject *bullet, s16 x, s16 y);
 
+void CreateExplosion(s16 x, s16 y);
+
+void DestroyEnemy(GameObject *enemy);
+
+void ReleaseGameObject(GameObject *gameObject, Pool *pool);
 
 int main()
 {
@@ -117,6 +125,7 @@ int main()
             HandleInput();
             UpdatePlayer();
             UpdateBullets();
+            UpdateExplosions();
             UpdateEnemies();
             CheckCollisions();
         }
@@ -140,18 +149,21 @@ void InitializeGame()
 {
     VDP_setScrollingMode(HSCROLL_TILE, VSCROLL_PLANE);
     
-
+    
     Z80_loadDriver(Z80_DRIVER_XGM2, TRUE);
     
     JOY_init();
     SPR_init();
 //    SND_startPlay_PCM(music, sizeof(music), SOUND_RATE_16000, SOUND_PAN_CENTER, 0);
-
+    
     VDP_drawImageEx(BG_A, &mapImage, TILE_ATTR_FULL(PAL0, FALSE, FALSE, FALSE, TILE_USER_INDEX), 0, 0, TRUE, TRUE);
     
     InitObjectsPools();
     InitializePlayer();
-    InitializeBullets();
+    
+    PAL_setPalette(PAL2, explosion_sprite.palette->data, DMA);
+
+    
     InitializeEnemies();
     
     
@@ -164,6 +176,7 @@ void InitObjectsPools()
 {// Initialize object pools
     bulletPool = POOL_create(MAX_BULLETS, sizeof(GameObject));
     enemyPool = POOL_create(MAX_ENEMIES, sizeof(GameObject));
+    explosionPool = POOL_create(MAX_EXPLOSION, sizeof(GameObject));
 }
 
 // Initialize the player
@@ -176,11 +189,6 @@ void InitializePlayer()
     gameState.player.y = SCREEN_HEIGHT / 2;
 }
 
-// Initialize bullets
-void InitializeBullets()
-{
-    PAL_setPalette(PAL2, bullet_sprite.palette->data, DMA);
-}
 
 // Initialize enemies
 void InitializeEnemies()
@@ -208,6 +216,15 @@ void HandleInput()
     
 }
 
+void ReleaseGameObject(GameObject *gameObject, Pool *pool)
+{
+    SPR_releaseSprite(gameObject->sprite);
+    gameObject->x = 0;
+    POOL_release(pool, gameObject, TRUE);
+    gameObject = NULL;
+}
+
+
 // Try to shoot a bullet
 void TryShootBullet()
 {
@@ -219,18 +236,47 @@ void TryShootBullet()
     GameObject *bullet = (GameObject *) POOL_allocate(bulletPool);
     
     if (bullet)
+        ShootBullet(bullet, gameState.player.x + OBJECT_SIZE, gameState.player.y);
+    
+    // Allocate a bullet from the pool
+    bullet = (GameObject *) POOL_allocate(bulletPool);
+    
+    if (bullet)
     {
-        bullet->sprite = SPR_addSprite(&bullet_sprite, gameState.player.x + OBJECT_SIZE, gameState.player.y,
-                                       TILE_ATTR(PAL2, 0, FALSE, FALSE));
-        bullet->x = gameState.player.x + OBJECT_SIZE;
-        bullet->y = gameState.player.y;
-
-//        SND_startPlay_PCM(xpcm_shoot, sizeof(xpcm_shoot), SOUND_RATE_16000, SOUND_PAN_CENTER, 0);
-        XGM2_playPCM(xpcm_shoot, sizeof(xpcm_shoot), SOUND_PCM_CH2);
+        ShootBullet(bullet, gameState.player.x + OBJECT_SIZE, gameState.player.y + 16);
         
+        XGM2_playPCM(xpcm_shoot, sizeof(xpcm_shoot), SOUND_PCM_CH2);
         // Update the last shot frame
         gameState.lastShotFrame = GetFrameCount();
     }
+    
+}
+
+void ShootBullet(GameObject *bullet, s16 x, s16 y)
+{
+    bullet->sprite = SPR_addSprite(&bullet_sprite,
+                                   gameState.player.x + OBJECT_SIZE,
+                                   gameState.player.y,
+                                   TILE_ATTR(PAL1, 0, FALSE, FALSE));
+    bullet->x = x;
+    bullet->y = y;
+}
+
+// Do Explosion
+void CreateExplosion(s16 x, s16 y)
+{
+    // Allocate a bullet from the pool
+    GameObject *explosion = (GameObject *) POOL_allocate(explosionPool);
+    
+    if (explosion)
+    {
+        explosion->sprite = SPR_addSprite(&explosion_sprite,
+                                          x, y, TILE_ATTR(PAL2, 0, FALSE, FALSE));
+        SPR_setAnimationLoop(explosion->sprite, FALSE);
+        
+        XGM2_playPCM(xpcm_explosion, sizeof(xpcm_explosion), SOUND_PCM_CH3);
+    }
+    
 }
 
 // Update player position
@@ -242,7 +288,7 @@ void UpdatePlayer()
 // Update bullets
 void UpdateBullets()
 {
-    FOREACH_OBJECT_IN_POOL(bullet, bulletPool)
+    FOREACH_ALLOCATED_IN_POOL(bullet, bulletPool)
     {
         if (bullet)
         {
@@ -251,11 +297,20 @@ void UpdateBullets()
             
             if (bullet->x > SCREEN_WIDTH)
             {
-                SPR_releaseSprite(bullet->sprite);
-                bullet->x = 0;
-                POOL_release(bulletPool, bullet, TRUE); // Free the bullet
-                bullet = NULL; // Clear the pointer
+                ReleaseGameObject(bullet, bulletPool);
             }
+        }
+    }
+}
+
+// Update explosion
+void UpdateExplosions()
+{
+    FOREACH_ALLOCATED_IN_POOL(explosion, explosionPool)
+    {
+        if (explosion && SPR_isAnimationDone(explosion->sprite))
+        {
+            ReleaseGameObject(explosion, explosionPool);
         }
     }
 }
@@ -263,7 +318,7 @@ void UpdateBullets()
 // Update enemies
 void UpdateEnemies()
 {
-    FOREACH_OBJECT_IN_POOL(enemy, enemyPool)
+    FOREACH_ALLOCATED_IN_POOL(enemy, enemyPool)
     {
         if (enemy)
         {
@@ -300,17 +355,24 @@ void SpawnEnemy()
     }
 }
 
+// Spawn an enemy
+void DestroyEnemy(GameObject *enemy)
+{
+    CreateExplosion(enemy->x-8, enemy->y);
+    ReleaseGameObject(enemy, enemyPool);
+}
+
 // Check collisions
 void CheckCollisions()
 {
     // Check bullet-enemy collisions
     
     
-    FOREACH_OBJECT_IN_POOL(bullet, bulletPool)
+    FOREACH_ALLOCATED_IN_POOL(bullet, bulletPool)
     {
         if (bullet)
         {
-            FOREACH_OBJECT_IN_POOL(enemy, enemyPool)
+            FOREACH_ALLOCATED_IN_POOL(enemy, enemyPool)
             {
                 if (enemy &&
                     
@@ -319,11 +381,9 @@ void CheckCollisions()
                     bullet->y < enemy->y + OBJECT_SIZE &&
                     bullet->y + OBJECT_SIZE > enemy->y)
                 {
-                    // Destroy enemy and bullet
-                    SPR_releaseSprite(enemy->sprite);
-                    POOL_release(enemyPool, enemy, TRUE); // Free the enemy
-                    enemy = NULL;
+                    DestroyEnemy(enemy);
                     
+                    // Destroy bullet
                     SPR_releaseSprite(bullet->sprite);
                     POOL_release(bulletPool, bullet, TRUE); // Free the bullet
                     bullet = NULL;
@@ -335,7 +395,7 @@ void CheckCollisions()
     }
     
     // Check player-enemy collisions
-    FOREACH_OBJECT_IN_POOL(enemy, enemyPool)
+    FOREACH_ALLOCATED_IN_POOL(enemy, enemyPool)
     {
         if (enemy &&
             gameState.player.x < enemy->x + OBJECT_SIZE &&
@@ -344,10 +404,9 @@ void CheckCollisions()
             gameState.player.y + OBJECT_SIZE > enemy->y)
         {
             // Destroy player and enemy
-            SPR_releaseSprite(gameState.player.sprite);
-            SPR_releaseSprite(enemy->sprite);
-            POOL_release(enemyPool, enemy, TRUE); // Free the enemy
-            enemy = NULL;
+            DestroyEnemy(enemy);
+            
+            ReleaseGameObject(enemy, enemyPool);
             
             gameState.gameOver = TRUE;
 //            SND_startPlay_PCM(explosion_sound, sizeof(explosion_sound), SOUND_RATE_16000, SOUND_PAN_CENTER, 0);
@@ -356,16 +415,9 @@ void CheckCollisions()
     }
 }
 
-void ScrollMap()
-{
-//    MAP_scrollTo(map, gameState->bgScrollX, 0);
-//    gameState->bgScrollX++;
-}
-
 // Render the game
 void RenderGame()
 {
-    ScrollMap();
     SPR_update();
     
     static s16 lineOffsetX[10][30];
@@ -385,22 +437,3 @@ void RenderGame()
     }
 }
 
-bool VDP_drawImageEx2(VDPPlane plane, const Image *image, u16 basetile, u16 x, u16 y, bool loadpal, bool dma)
-{
-//    if (!VDP_loadTileSetEx(image->tileset, basetile & TILE_INDEX_MASK, dma?DMA:CPU, image->tileset->numTile, 0))
-//        return FALSE;
-    
-    TileMap *tilemap = image->tilemap;
-    
-    // no interest in using VDP_setTileMapEx with DMA (DMA_QUEUE is ok)
-    if (!VDP_setTileMapEx(plane, tilemap, basetile, x, y, 0, 0, tilemap->w, tilemap->h, CPU))
-        return FALSE;
-    
-    Palette *palette = image->palette;
-    
-    // palette
-    if (loadpal)
-        PAL_setPaletteColors((basetile >> 9) & 0x30, palette, CPU);
-    
-    return TRUE;
-}
