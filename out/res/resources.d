@@ -1,5 +1,7 @@
 out/res/resources.o: res/resources.res \
+C:/Dev/smd_dev/experements/scroll-shooter/res/sounds/03\ -\ Back\ to\ the\ Fire\ (Stage\ 1\ -\ Hydra).vgm \
 C:/Dev/smd_dev/experements/scroll-shooter/res/player.png \
+C:/Dev/smd_dev/experements/scroll-shooter/res/enemy1.png \
 C:/Dev/smd_dev/experements/scroll-shooter/res/map.png \
 C:/Dev/smd_dev/experements/scroll-shooter/res/explosion2.png \
 C:/Dev/smd_dev/experements/scroll-shooter/res/bullet.png \
