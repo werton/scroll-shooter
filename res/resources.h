@@ -4,6 +4,7 @@
 
 extern const u8 xpcm_shoot[3072];
 extern const u8 xpcm_explosion[9728];
+extern const u8 xgm2_music[11264];
 extern const Image mapImage;
 extern const Image bgImage;
 extern const SpriteDefinition player_sprite;

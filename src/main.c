@@ -1,9 +1,11 @@
+// *****************************************************************************
 // Scroll shooter example
 //
 // Written by werton playskin 05/2025
 // GFX artwork created by Luis Zuno (@ansimuz)
 // Moon surface artwork and GFX created by mattwalkden.itch.io
-// SFX created by JDSherbert jdsherbert.itch.io/
+// SFX created by JDSherbert jdsherbert.itch.io
+// *****************************************************************************
 
 #include <genesis.h>
 #include <maths.h>
@@ -12,7 +14,7 @@
 // =============================================
 // Game Configuration
 // =============================================
-#define PLAY_MUSIC                      0
+#define PLAY_MUSIC                      1
 #define SHOW_FPS                        1
 
 // =============================================
@@ -71,7 +73,7 @@
 // UI and messages
 #define JOIN_MESSAGE_BLINK_INTERVAL     60
 #define JOIN_MESSAGE_VISIBLE_FRAMES     30
-#define PLAYER1_JOIN_TEXT_POS_X         8
+#define PLAYER1_JOIN_TEXT_POS_X         1
 #define PLAYER2_JOIN_TEXT_POS_X         25
 #define JOIN_TEXT_POS_Y                 27
 
@@ -107,7 +109,7 @@
 
 // Iterate through all players
 #define FOREACH_PLAYER(player) \
-    for (Player* player = game.players; player <= &game.players[1]; player++)
+    for (Player* player = game.players; player <= game.players+1; player++)
 
 
 typedef enum {
@@ -494,20 +496,19 @@ void Game_Init() {
     EnemySpawner_Set(&sinSpawner);
 }
 
-// Render game frame including UI and backgrounds
-void Game_Render() {
-#if SHOW_FPS
+void RenderFPS() {
     VDP_setTextPalette(PAL0);
     VDP_setWindowOnBottom(1);
     VDP_setTextPlane(WINDOW);
-    VDP_showCPULoad(0, 27);
-    VDP_showFPS(FALSE, 4, 27);
-#endif
+    VDP_showCPULoad(17, 27);
+    VDP_showFPS(FALSE, 21, 27);
+}
 
+// Render game frame including UI and backgrounds
+void Game_Render() {
+    RenderFPS();
     RenderMessage();
-
     BackgroundScroll();
-
     SPR_update();
 }
 
@@ -798,6 +799,8 @@ void RenderMessage() {
                     VDP_drawTextBG(WINDOW, "2P PRESS START", PLAYER2_JOIN_TEXT_POS_X, JOIN_TEXT_POS_Y);
         }
     }
-    else
-        VDP_clearTextAreaBG(WINDOW, PLAYER1_JOIN_TEXT_POS_X, JOIN_TEXT_POS_Y, 32, 1);
+    else {
+        VDP_clearTextAreaBG(WINDOW, PLAYER1_JOIN_TEXT_POS_X, JOIN_TEXT_POS_Y, 14, 1);
+        VDP_clearTextAreaBG(WINDOW, PLAYER2_JOIN_TEXT_POS_X, JOIN_TEXT_POS_Y, 14, 1);
+    }
 }

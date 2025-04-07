@@ -14,4 +14,4 @@ SPRITE explosion_sprite "explosion.png" 4 4 NONE 3
 WAV xpcm_shoot "sounds/shoot.wav" XGM
 WAV xpcm_explosion "sounds/explosion.wav" XGM
 
-//XGM2 xgm2_music "sounds/03 - Back to the Fire (Stage 1 - Hydra).vgm"
+XGM2 xgm2_music "sounds/03 - Back to the Fire (Stage 1 - Hydra).vgm"
