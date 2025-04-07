@@ -504,11 +504,33 @@ void RenderFPS() {
     VDP_showFPS(FALSE, 21, 27);
 }
 
+// Render UI messages like join prompts
+void RenderMessage() {
+    blinkCounter++;
+
+    switch (blinkCounter) {
+        case JOIN_MESSAGE_BLINK_INTERVAL-JOIN_MESSAGE_VISIBLE_FRAMES:
+            FOREACH_PLAYER(player) {
+                if (player->state == PL_STATE_SUSPENDED)
+                    if (player->index == 0)
+                        VDP_drawTextBG(WINDOW, "1P PRESS START", PLAYER1_JOIN_TEXT_POS_X, JOIN_TEXT_POS_Y);
+                    else
+                        VDP_drawTextBG(WINDOW, "2P PRESS START", PLAYER2_JOIN_TEXT_POS_X, JOIN_TEXT_POS_Y);
+            }
+            break;
+
+        case JOIN_MESSAGE_BLINK_INTERVAL:
+            blinkCounter = 0;
+            VDP_clearTextLineBG(WINDOW, JOIN_TEXT_POS_Y);
+            break;
+    }
+}
+
 // Render game frame including UI and backgrounds
 void Game_Render() {
-    RenderFPS();
-    RenderMessage();
     BackgroundScroll();
+    RenderMessage();
+    RenderFPS();
     SPR_update();
 }
 
@@ -783,24 +805,3 @@ void Player_UpdateInput(Player* player) {
         Player_TryShootBullet(player);
 }
 
-// Render UI messages like join prompts
-void RenderMessage() {
-    blinkCounter++;
-
-    if (blinkCounter == JOIN_MESSAGE_BLINK_INTERVAL)
-        blinkCounter = 0;
-
-    if (blinkCounter < JOIN_MESSAGE_VISIBLE_FRAMES) {
-        FOREACH_PLAYER(player) {
-            if (player->state == PL_STATE_SUSPENDED)
-                if (player->index == 0)
-                    VDP_drawTextBG(WINDOW, "1P PRESS START", PLAYER1_JOIN_TEXT_POS_X, JOIN_TEXT_POS_Y);
-                else
-                    VDP_drawTextBG(WINDOW, "2P PRESS START", PLAYER2_JOIN_TEXT_POS_X, JOIN_TEXT_POS_Y);
-        }
-    }
-    else {
-        VDP_clearTextAreaBG(WINDOW, PLAYER1_JOIN_TEXT_POS_X, JOIN_TEXT_POS_Y, 14, 1);
-        VDP_clearTextAreaBG(WINDOW, PLAYER2_JOIN_TEXT_POS_X, JOIN_TEXT_POS_Y, 14, 1);
-    }
-}
