@@ -14,7 +14,7 @@
 // =============================================
 // Game Configuration
 // =============================================
-#define PLAY_MUSIC                      1
+#define PLAY_MUSIC                      0
 #define SHOW_FPS                        1
 
 // =============================================
@@ -158,7 +158,13 @@ typedef struct {
     u16 blinkCounter;       // Counter for damage blink effect
 } GameObject;
 
-// Enemy object with blinking effect
+// Projectile object
+typedef struct {
+    GameObject;
+    u8 ownerIndex;
+} Projectile;
+
+// Enemy object
 typedef struct {
     GameObject;
 } Enemy;
@@ -171,6 +177,7 @@ typedef struct Player {
     struct Player* next;    // Next player in linked list
     u16 invincibleTimer;    // Timer for invincibility after respawn
     u16 respawnTimer;       // Timer for respawning
+    u16 score;
     u8 index;               // Player index (0 or 1)
     u8 lives;
     PlayerState state;
@@ -200,7 +207,7 @@ u32 blinkCounter = 0;
 bool showSecondPlayerText = TRUE;
 
 // Pools for game objects
-Pool *bulletPool;
+Pool *projectilePool;
 Pool *enemyPool;
 Pool *explosionPool;
 
@@ -237,7 +244,7 @@ const EnemySpawner sinSpawner = {
 // =============================================
 // Function Prototypes
 // =============================================
-void Bullet_Spawn(GameObject *bullet, fix16 x, fix16 y);
+void Projectile_Spawn(Projectile *bullet, fix16 x, fix16 y, u8 ownerIndex);
 void Bullet_UpdateEnemyCollision();
 void Bullets_Update();
 void Enemy_Spawn(fix16 x, fix16 y);
@@ -262,12 +269,14 @@ Player* Player_Add(u8 index);
 void Player_Explode(Player *player);
 void Player_JoinUpdate();
 void Player_Remove(Player* player);
-void Player_TryShootBullet(Player* player);
+void Bullet(Player* player);
 void Player_Update(Player* player);
 void Player_UpdateEnemyCollision(Player* player);
 void Player_UpdateInput(Player* player);
 void Players_Create();
+void Score_Update(Player* player);
 void RenderMessage();
+void RenderScore(Player *player);
 
 // =============================================
 // Main Game Loop
@@ -320,24 +329,29 @@ void BackgroundScroll()
 }
 
 // Initialize a bullet object at specified position
-void Bullet_Spawn(GameObject *bullet, fix16 x, fix16 y) {
+void Projectile_Spawn(Projectile *bullet, fix16 x, fix16 y, u8 ownerIndex) {
     GameObject_Init(bullet, &bullet_sprite, PAL1, x, y,
                    BULLET_WIDTH, BULLET_HEIGHT, BULLET_HP, BULLET_DAMAGE);
     SPR_setAlwaysOnTop(bullet->sprite);
+    bullet->ownerIndex = ownerIndex;
 }
 
 // Check collisions between bullets and enemies
 void Bullet_UpdateEnemyCollision() {
-    FOREACH_ALLOCATED_IN_POOL(GameObject, bullet, bulletPool) {
+    FOREACH_ALLOCATED_IN_POOL(Projectile, bullet, projectilePool) {
         if (!bullet) continue;
 
         FOREACH_ALLOCATED_IN_POOL(Enemy, enemy, enemyPool) {
             if (!enemy) continue;
 
             if (GameObject_CollisionUpdate(bullet, (GameObject *) enemy)) {
-                if (!enemy->hp)
+                if (!enemy->hp) {
                     GameObject_ReleaseWithExplode((GameObject *)enemy, enemyPool);
-                GameObject_Release(bullet, bulletPool);
+
+                    game.players[bullet->ownerIndex].score += 10;
+                    Score_Update(&game.players[bullet->ownerIndex]);
+                }
+                GameObject_Release(bullet, projectilePool);
                 break;
             }
         }
@@ -346,13 +360,14 @@ void Bullet_UpdateEnemyCollision() {
 
 // Update all active bullets movement and boundaries
 void Bullets_Update() {
-    FOREACH_ALLOCATED_IN_POOL(GameObject, bullet, bulletPool) {
+    FOREACH_ALLOCATED_IN_POOL(GameObject, bullet, projectilePool) {
+//        kprintf("bullet");
         if (bullet) {
             bullet->x += BULLET_OFFSET_X;
             SPR_setPosition(bullet->sprite, F16_toInt(bullet->x), F16_toInt(bullet->y));
 
             if (bullet->x > FIX16(SCREEN_WIDTH))
-                GameObject_Release(bullet, bulletPool);
+                GameObject_Release(bullet, projectilePool);
         }
     }
 }
@@ -491,6 +506,7 @@ void Game_Init() {
     ObjectsPools_Init();
     Players_Create();
     Player_Add(0);
+    RenderScore(&game.players[0]);
     PAL_setPalette(PAL2, explosion_sprite.palette->data, DMA);
     Enemies_Init();
     EnemySpawner_Set(&sinSpawner);
@@ -504,25 +520,57 @@ void RenderFPS() {
     VDP_showFPS(FALSE, 21, 27);
 }
 
+
+void Score_Update(Player *player) {
+    if (player->index == 0) {
+        static char str[5];
+        uintToStr(player->score, &str, 5);
+        VDP_drawTextBG(WINDOW, str, PLAYER1_JOIN_TEXT_POS_X+9, JOIN_TEXT_POS_Y);
+    }
+    else {
+        static char str2[5];
+        uintToStr(player->score, &str2, 5);
+        VDP_drawTextBG(WINDOW, str2, PLAYER2_JOIN_TEXT_POS_X+9, JOIN_TEXT_POS_Y);
+    }
+}
+
+void RenderScore(Player *player) {
+    if (player->index == 0)
+        VDP_drawTextBG(WINDOW, "1P SCORE:00000", PLAYER1_JOIN_TEXT_POS_X, JOIN_TEXT_POS_Y);
+    else
+        VDP_drawTextBG(WINDOW, "2P SCORE:00000", PLAYER2_JOIN_TEXT_POS_X, JOIN_TEXT_POS_Y);
+}
+
 // Render UI messages like join prompts
 void RenderMessage() {
     blinkCounter++;
 
-    switch (blinkCounter) {
-        case JOIN_MESSAGE_BLINK_INTERVAL-JOIN_MESSAGE_VISIBLE_FRAMES:
-            FOREACH_PLAYER(player) {
-                if (player->state == PL_STATE_SUSPENDED)
+    FOREACH_PLAYER(player) {
+        switch (blinkCounter) {
+
+            case 1:
+                if (player->state == PL_STATE_SUSPENDED) {
                     if (player->index == 0)
                         VDP_drawTextBG(WINDOW, "1P PRESS START", PLAYER1_JOIN_TEXT_POS_X, JOIN_TEXT_POS_Y);
                     else
                         VDP_drawTextBG(WINDOW, "2P PRESS START", PLAYER2_JOIN_TEXT_POS_X, JOIN_TEXT_POS_Y);
-            }
-            break;
+                }
+                break;
 
-        case JOIN_MESSAGE_BLINK_INTERVAL:
-            blinkCounter = 0;
-            VDP_clearTextLineBG(WINDOW, JOIN_TEXT_POS_Y);
-            break;
+            case JOIN_MESSAGE_VISIBLE_FRAMES:
+                if (player->state == PL_STATE_SUSPENDED) {
+                    if (player->index == 0)
+                        VDP_clearTextAreaBG(WINDOW, PLAYER1_JOIN_TEXT_POS_X, JOIN_TEXT_POS_Y, 15, 1);
+                    else
+                        VDP_clearTextAreaBG(WINDOW, PLAYER2_JOIN_TEXT_POS_X, JOIN_TEXT_POS_Y, 15, 1);
+                }
+                break;
+
+            case JOIN_MESSAGE_BLINK_INTERVAL:
+                blinkCounter = 0;
+                break;
+    }
+
     }
 }
 
@@ -566,7 +614,7 @@ void GameObject_Init(GameObject *object, const SpriteDefinition *spriteDef, u16 
         SPR_setPosition(object->sprite, F16_toInt(x), F16_toInt(y));
     }
 
-    SPR_setVisibility(object->sprite, AUTO_FAST);
+    SPR_setVisibility(object->sprite, VISIBLE);
     SPR_setAnimAndFrame(object->sprite, 0, 0);
 
     object->x = x;
@@ -606,7 +654,7 @@ bool IsRectCollided(fix16 x1, fix16 y1, u16 w1, u16 h1,
 // Initialize object pools for game entities
 void ObjectsPools_Init() {
     enemyPool = POOL_create(MAX_ENEMIES, sizeof(Enemy));
-    bulletPool = POOL_create(MAX_BULLETS, sizeof(GameObject));
+    projectilePool = POOL_create(MAX_BULLETS, sizeof(Projectile));
     explosionPool = POOL_create(MAX_EXPLOSION, sizeof(GameObject));
 }
 
@@ -679,6 +727,8 @@ void Player_JoinUpdate() {
                 player->lives = PLAYER_LIVES;
                 player->state = PL_STATE_DIED;
                 player->respawnTimer = 0;
+                player->score = 0;
+                RenderScore(player);
             }
             break;
 
@@ -708,19 +758,19 @@ void Player_Remove(Player* player) {
 }
 
 // Attempt to shoot bullets if cooldown allows
-void Player_TryShootBullet(Player* player) {
+void Bullet(Player* player) {
     if (player->state == PL_STATE_DIED)
       return;
 
     if (player->coolDownTicks != 0) return;
 
-    GameObject *bullet1 = (GameObject *)POOL_allocate(bulletPool);
-    GameObject *bullet2 = (GameObject *)POOL_allocate(bulletPool);
+    GameObject *bullet1 = (Projectile *)POOL_allocate(projectilePool);
+    GameObject *bullet2 = (Projectile *)POOL_allocate(projectilePool);
 
     if (bullet1)
-        Bullet_Spawn(bullet1, player->x + FIX16(OBJECT_SIZE), player->y);
+        Projectile_Spawn(bullet1, player->x + FIX16(OBJECT_SIZE), player->y, player->index);
     if (bullet2)
-        Bullet_Spawn(bullet2, player->x + FIX16(OBJECT_SIZE), player->y + FIX16(16));
+        Projectile_Spawn(bullet2, player->x + FIX16(OBJECT_SIZE), player->y + FIX16(16), player->index);
 
     if (bullet1 || bullet2) {
         XGM2_playPCM(xpcm_shoot, sizeof(xpcm_shoot), SHOOT_SOUND_CHANNEL);
@@ -802,6 +852,13 @@ void Player_UpdateInput(Player* player) {
     }
 
     if (input & BUTTON_A)
-        Player_TryShootBullet(player);
+        Bullet(player);
+
+    if (input & BUTTON_C) {
+        SPR_setVisibility(player->sprite, HIDDEN);
+        Player_Remove(player);
+        player->state = PL_STATE_SUSPENDED;
+    }
+
 }
 
