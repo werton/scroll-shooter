@@ -21,4 +21,6 @@ include_directories(src)
 add_executable(
         tile-animation
         src/main.c
+        src/game_object.c
+        src/game_object.h
 )

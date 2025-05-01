@@ -1,0 +1,1 @@
+CALL "%~dp0build.bat" run

@@ -1,4 +1,2 @@
-CALL "%~dp0build.bat" clean
-CALL "%~dp0build.bat" release
+CALL "%~dp0build.bat" clean-release release
 
-pause

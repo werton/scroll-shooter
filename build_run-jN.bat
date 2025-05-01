@@ -1,0 +1,1 @@
+CALL "%~dp0build.bat" -j%NUMBER_OF_PROCESSORS% run
