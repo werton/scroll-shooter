@@ -20,7 +20,7 @@ set paused=1
 set build_result=0
 
 :: Process arguments - remove custom flag
-set args="%*"
+set args=%*
 
 :: Parse command line arguments (both with and without dash prefix)
 for %%x in (%*) do (
@@ -37,11 +37,25 @@ for %%x in (%*) do (
 
 if !args!=="" set args="release" & set release=1
 
-if !res!==1 set args=%args:res=%
-if !code!==1 set args=%args:code=%
-if !run!==1 set args=%args:run=%
+if %res%==1 set args=%args:res=%
+if %clean%==1 set args=%args:clean=%
+if %code%==1 set args=%args:code=%
+if %run%==1 set args=%args:run=%
+if %paused%==0 set args=%args:nopause=%
 
-::set "args=!args:  = !"
+:: Удаляем пробелы в начале
+:left_trim
+if "!args:~0,1!"==" " (
+    set args=!args:~1!
+    goto left_trim
+)
+
+:: Удаляем пробелы в конце
+:right_trim
+if "!args:~-1!"==" " (
+    set args=!args:~0,-1!
+    goto right_trim
+)
 
 echo args: [!args!]
 
@@ -111,7 +125,7 @@ goto main
 
 :build_res
 echo Building resources separated...
-call "%smd_dev_path%\devkit\sgdk\sgdk_current\bin\make.exe" -f "%smd_dev_path%\devkit\sgdk\sgdk_current\makefile_0.gen" && set build_result=1
+(call "%smd_dev_path%\devkit\sgdk\sgdk_current\bin\make.exe" -f "%smd_dev_path%\devkit\sgdk\sgdk_current\makefile_0.gen" !args!) && (set build_result=1)
 set res=0
 if !build_result!==1 echo [32mBuilding RES - done (separated makefile)[0m
 goto main
@@ -119,7 +133,7 @@ goto main
 
 :build_code
 echo Building code separated makefile...
-call "%smd_dev_path%\devkit\sgdk\sgdk_current\bin\make.exe" -f "%smd_dev_path%\devkit\sgdk\sgdk_current\makefile_1.gen" && set build_result=1
+(call "%smd_dev_path%\devkit\sgdk\sgdk_current\bin\make.exe" -f "%smd_dev_path%\devkit\sgdk\sgdk_current\makefile_1.gen" !args!) && (set build_result=1)
 set code=0
 @echo.
 if !build_result!==1 echo [32mBuilding CODE - done (separated makefile)[0m

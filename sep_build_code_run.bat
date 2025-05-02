@@ -1,10 +1,23 @@
-set build_result=0
+@echo off
+setlocal enabledelayedexpansion
+
+set paused=1
+
+:: Parse command line arguments (both with and without dash prefix)
+if "%~1"=="nopause" set paused=0
 
 :: Run build via Make. If return code is not 0, show error message and exit
-call %~dp0timecmd.bat (call %~dp0sep_build_code.bat -j)
-
-if %errorlevel% equ 0 (set build_result=1)
+call %~dp0timecmd.bat (call "%~dp0sep_build_code.bat" nopause)
 
 
-CALL "%~dp0run.bat"
-@PAUSE >nul
+call %~dp0run.bat
+
+if !paused!==1  (
+	echo.
+	echo.
+	echo Press any key.
+	@PAUSE >nul
+)
+
+endlocal
+exit /b 0
