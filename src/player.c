@@ -6,6 +6,7 @@
 #include "defs.h"
 #include "globals.h"
 #include "player.h"
+#include "explosion.h"
 #include "resources.h"
 
 
@@ -16,7 +17,7 @@ void Players_Create() {
     	game.players = (struct Player *) MEM_alloc(sizeof(struct Player) * 2);
     
     	if (!game.players)
-    		return NULL;
+    		return;
     
         // Initialize player structure
     	memset(game.players, 0, sizeof(struct Player) * 2);

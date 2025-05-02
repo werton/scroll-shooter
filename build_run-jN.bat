@@ -1,1 +1,1 @@
-CALL "%~dp0build.bat" -j%NUMBER_OF_PROCESSORS% run
+CALL "%~dp0build.bat" release -j run

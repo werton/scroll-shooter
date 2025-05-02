@@ -1,1 +1,1 @@
-CALL "%~dp0build.bat" run
+CALL "%~dp0build.bat" release run

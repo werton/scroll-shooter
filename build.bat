@@ -10,6 +10,7 @@ if errorlevel 1 (
 )
 
 :: Initialize variables
+set args=""
 set clean=0
 set res=0
 set code=0
@@ -35,7 +36,7 @@ for %%x in (%*) do (
     if /i "!arg!"=="nopause" set paused=0
 )
 
-if !args!=="" set args="release" & set release=1
+if "!args!"=="" (set args="release" & set release=1)
 
 if %res%==1 set args=%args:res=%
 if %clean%==1 set args=%args:clean=%
@@ -103,6 +104,9 @@ exit /b 0
 
 
 :clean
+:: delete .d .rs files in res folder
+call "%~dp0clean_files.bat" "%~dp0res" d rs
+:: clean target
 call "%smd_dev_path%\devkit\sgdk\sgdk_current\bin\make.exe" -f "%smd_dev_path%\devkit\sgdk\sgdk_current\makefile.gen" "clean"
 set clean=0
 @echo.
@@ -111,7 +115,6 @@ echo [32mClean done.[0m
 @echo.
 @echo.
 if !release!==0 (goto exit)    
-
 goto main
 
 

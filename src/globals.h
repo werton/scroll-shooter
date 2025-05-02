@@ -8,7 +8,6 @@
 #include "game_object.h"
 #include "enemy_type.h"
 #include "player.h"
-#include "enemy_type.h"
 #include "game_types.h"
 
 
