@@ -1,23 +1,15 @@
 @echo off
 setlocal enabledelayedexpansion
 
-set build_result=0
 set paused=1
 
 :: Parse command line arguments (both with and without dash prefix)
-for %%x in (%*) do (
-	echo arg: "!arg!"
-    set "arg=%%~x"
-    if /i "!arg!"=="nopause" set paused=0
-)
+if "%~1"=="nopause" set paused=0
 
-call %~dp0timecmd.bat (call "%~dp0sep_rebuild_all.bat" nopause) 
-
-echo Press any key 0
+:: Run build via Make. If return code is not 0, show error message and exit
+call %~dp0timecmd.bat (call "%~dp0sep_rebuild_all2.bat" nopause) 
 
 call %~dp0run.bat
-
-
 
 if !paused!==1  (
 	echo.
@@ -26,6 +18,5 @@ if !paused!==1  (
 	@PAUSE >nul
 )
 
-echo Press any key.
 endlocal
 exit /b 0

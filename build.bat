@@ -1,93 +1,68 @@
 @echo off
 setlocal enabledelayedexpansion
 
+:: Get SMD_DEV_PATH path
+call find_smd_dev.bat smd_dev_path
+if errorlevel 1 (
+    echo Error: smd_dev folder not found!
+    pause
+    exit /b 1
+)
+
 :: Initialize variables
 set clean=0
-set debug_build=0
-set code_only=0
-set run_emul=0
-set paused=0
+set res=0
+set code=0
+set sep=0
+set release=0
+set run=0
+set paused=1
+set build_result=0
+
+:: Process arguments - remove custom flag
+set args="%*"
 
 :: Parse command line arguments (both with and without dash prefix)
 for %%x in (%*) do (
     set "arg=%%~x"
     if /i "!arg!"=="clean" set clean=1
-    if /i "!arg!"=="cleanrelease" set clean=1
-    if /i "!arg!"=="debug" (
-        set debug_build=1
-        set multi_core_flag=-j4
-    )
-    if /i "!arg!"=="code-only" set code_only=1
-    if /i "!arg!"=="run" set run_emul=1
-    if /i "!arg!"=="pause" set paused=1
+    if /i "!arg!"=="res" set sep=1 & set res=1 & set release=1
+    if /i "!arg!"=="code" set sep=1 & set code=1 & set release=1      
+    if /i "!arg!"=="sep" set sep=1 & set res=1 & set code=1 & set release=1
+    if /i "!arg!"=="release" set release=1
+    if /i "!arg!"=="debug" set release=2
+    if /i "!arg!"=="run" set run=1
+    if /i "!arg!"=="nopause" set paused=0
 )
 
+if !args!=="" set args="release" & set release=1
 
-:: Get current path and remove trailing backslash
-set "current_path=%~dp0"
-if "%current_path:~-1%"=="\" set "current_path=%current_path:~0,-1%"
+if !res!==1 set args=%args:res=%
+if !code!==1 set args=%args:code=%
+if !run!==1 set args=%args:run=%
 
-:: Split path and search for smd_dev folder
-set "smd_dev_path="
-:loop
-for %%i in ("%current_path%") do (
-    set "folder=%%~nxi"
-    if /i "!folder!"=="smd_dev" (
-        set "smd_dev_path=!current_path!"
-        goto found
-    )
-)
+::set "args=!args:  = !"
 
-:: Move one level up in directory tree
-for %%i in ("%current_path%") do set "parent=%%~dpi"
-if "%parent%"=="%current_path%" goto not_found
-set "current_path=%parent%"
-if "%current_path:~-1%"=="\" set "current_path=%current_path:~0,-1%"
-goto loop
+echo args: [!args!]
 
-:not_found
-echo Error: smd_dev folder not found!
-exit /b 1
-
-:found
-echo smd_dev folder located at: %smd_dev_path%
-echo args: %*
-
-:: Process arguments - remove 'run' flag and add -jN flag for make
-set args=%*
-set args=%args:run=%
-set args=%multi_core_flag% %args%
-
-set build_result=1
-
-if !clean! == 1 (goto clean) else (goto build)
-
-:clean
-:: Run build via Make. If return code is not 0, show error message and exit
-(CALL "%smd_dev_path%\devkit\sgdk\sgdk_current\bin\make.exe" -f "%smd_dev_path%\devkit\sgdk\sgdk_current\makefile.gen" %args%) || (set build_result=0)
-goto print
-
-:build
-:: Run build via Make. If return code is not 0, show error message and exit
-CALL "%~dp0timecmd.bat" (CALL "%smd_dev_path%\devkit\sgdk\sgdk_current\bin\make.exe" -f "%smd_dev_path%\devkit\sgdk\sgdk_current\makefile.gen" %args%) || (set build_result=0)
-
-:print
 :: Enable ANSI color codes in console
 reg add "HKCU\Console" /v VirtualTerminalLevel /t REG_DWORD /d 1 /f >nul
 
-if %build_result%==1 (
-    @ECHO.
-    @ECHO.
-    if %clean% == 1 (
-    	echo [32mClean done.[0m
-    ) else (
-    	echo [32mBuild done.[0m
-    )
-    @ECHO.
-    @ECHO.
+:main
+if !clean!==1 (goto clean)
+
+if %sep%==1 (
+	if %res%==1 goto build_res
+	if %code%==1 goto build_code
+) else (	
+	if not %release%==0 goto build
+)
+
+
+@echo.
+if !build_result!==1 (
+	echo [32mBuild done.[0m	
 ) else (
-    @ECHO.
-    @ECHO.
     echo [31mBUILD FAILED. STOPPED.[0m
     echo press any key.
     @PAUSE >nul
@@ -96,17 +71,56 @@ if %build_result%==1 (
 
 
 :: Launch emulator if requested
-if %run_emul% == 1 (
+if !run! == 1 (
+    @echo.
+    @echo.
     echo Launching emulator...    
-    CALL "%~dp0run.bat"
+    call "%~dp0run.bat"
 )
 
-if %paused% == 1 (
-@PAUSE >nul
+if !paused! == 1 (
+    echo press any key.
+	@PAUSE >nul
 )
 
-goto end
-
-:end
+:exit
 endlocal
-exit /b 1
+exit /b 0
+
+
+:clean
+call "%smd_dev_path%\devkit\sgdk\sgdk_current\bin\make.exe" -f "%smd_dev_path%\devkit\sgdk\sgdk_current\makefile.gen" "clean"
+set clean=0
+@echo.
+@echo.
+echo [32mClean done.[0m
+@echo.
+@echo.
+if !release!==0 (goto exit)    
+
+goto main
+
+
+:build
+echo Building all single makefile...
+call "%~dp0timecmd.bat" (call "%smd_dev_path%\devkit\sgdk\sgdk_current\bin\make.exe" -f "%smd_dev_path%\devkit\sgdk\sgdk_current\makefile.gen" !args!) && (set build_result=1)
+set release=0
+if !build_result!==1 echo [32mBuilding ALL - done (one makefile)[0m
+goto main
+
+
+:build_res
+echo Building resources separated...
+call "%smd_dev_path%\devkit\sgdk\sgdk_current\bin\make.exe" -f "%smd_dev_path%\devkit\sgdk\sgdk_current\makefile_0.gen" && set build_result=1
+set res=0
+if !build_result!==1 echo [32mBuilding RES - done (separated makefile)[0m
+goto main
+
+
+:build_code
+echo Building code separated makefile...
+call "%smd_dev_path%\devkit\sgdk\sgdk_current\bin\make.exe" -f "%smd_dev_path%\devkit\sgdk\sgdk_current\makefile_1.gen" && set build_result=1
+set code=0
+@echo.
+if !build_result!==1 echo [32mBuilding CODE - done (separated makefile)[0m
+goto main

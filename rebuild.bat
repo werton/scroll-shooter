@@ -1,2 +1,2 @@
-CALL "%~dp0build.bat" clean-release release
+CALL "%~dp0build.bat" clean release
 
