@@ -24,8 +24,8 @@
 // =============================================
 // Function Prototypes
 // =============================================
-void Bullet_UpdateEnemyCollision();
-void Bullets_Update();
+void Projectile_UpdateEnemyCollision();
+void Projectile_Update();
 
 void Game_Init();
 void Game_Render();
@@ -55,10 +55,10 @@ int main(bool hardReset) {
             Player_UpdateEnemyCollision(player);
         }
 
-        Bullets_Update();
+        Projectile_Update();
         Enemies_Update();
         Explosions_Update();
-        Bullet_UpdateEnemyCollision();
+        Projectile_UpdateEnemyCollision();
         EnemySpawner_Update();
 
         Game_Render();
@@ -96,21 +96,21 @@ void BackgroundScroll()
 
 
 // Check collisions between bullets and enemies
-void Bullet_UpdateEnemyCollision() {
-    FOREACH_ALLOCATED_IN_POOL(Projectile, bullet, projectilePool) {
-        if (!bullet) continue;
+void Projectile_UpdateEnemyCollision() {
+    FOREACH_ALLOCATED_IN_POOL(Projectile, projectile, projectilePool) {
+        if (!projectile) continue;
 
         FOREACH_ALLOCATED_IN_POOL(Enemy, enemy, enemyPool) {
             if (!enemy) continue;
 
-            if (GameObject_CollisionUpdate(bullet, (GameObject *) enemy)) {
+            if (GameObject_CollisionUpdate(projectile, (GameObject *) enemy)) {
                 if (!enemy->hp) {
                     GameObject_ReleaseWithExplode((GameObject *)enemy, enemyPool);
 
-                    game.players[bullet->ownerIndex].score += 10;
-                    Score_Update(&game.players[bullet->ownerIndex]);
+                    game.players[projectile->ownerIndex].score += 10;
+                    Score_Update(&game.players[projectile->ownerIndex]);
                 }
-                GameObject_Release(bullet, projectilePool);
+                GameObject_Release(projectile, projectilePool);
                 break;
             }
         }
@@ -118,15 +118,15 @@ void Bullet_UpdateEnemyCollision() {
 }
 
 // Update all active bullets movement and boundaries
-void Bullets_Update() {
-    FOREACH_ALLOCATED_IN_POOL(GameObject, bullet, projectilePool) {
+void Projectile_Update() {
+    FOREACH_ALLOCATED_IN_POOL(GameObject, projectile, projectilePool) {
 //        kprintf("bullet");
-        if (bullet) {
-            bullet->x += BULLET_OFFSET_X;
-            SPR_setPosition(bullet->sprite, F16_toInt(bullet->x), F16_toInt(bullet->y));
+        if (projectile) {
+            projectile->x += BULLET_OFFSET_X;
+            SPR_setPosition(projectile->sprite, F16_toInt(projectile->x), F16_toInt(projectile->y));
 
-            if (bullet->x > FIX16(SCREEN_WIDTH))
-                GameObject_Release(bullet, projectilePool);
+            if (projectile->x > FIX16(SCREEN_WIDTH))
+                GameObject_Release(projectile, projectilePool);
         }
     }
 }

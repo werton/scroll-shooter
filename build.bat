@@ -1,6 +1,8 @@
 @echo off
 setlocal enabledelayedexpansion
 
+set TOTAL_TIMER=%time%
+
 :: Get SMD_DEV_PATH path
 call find_smd_dev.bat smd_dev_path
 if errorlevel 1 (
@@ -39,6 +41,7 @@ for %%x in (%*) do (
 if "!args!"=="" (set args="release" & set release=1)
 
 if %res%==1 set args=%args:res=%
+if %sep%==1 set args=%args:sep=%
 if %clean%==1 set args=%args:clean=%
 if %code%==1 set args=%args:code=%
 if %run%==1 set args=%args:run=%
@@ -60,37 +63,44 @@ if "!args:~-1!"==" " (
 
 echo args: [!args!]
 
+
 :: Enable ANSI color codes in console
 reg add "HKCU\Console" /v VirtualTerminalLevel /t REG_DWORD /d 1 /f >nul
 
+
 :main
+::call %~dp0timer.bat PASS_TIMER begin
+set PASS_TIMER=%time%
+
 if !clean!==1 (goto clean)
 
 if %sep%==1 (
 	if %res%==1 goto build_res
 	if %code%==1 goto build_code
 ) else (	
-	if not %release%==0 goto build
+	if not %release%==0 (goto build_single) else (goto run)
 )
 
 
 @echo.
 if !build_result!==1 (
-	echo [32mBuild done.[0m	
+	echo [32mBuild done.[0m
+	call "%~dp0timer.bat" TOTAL_TIMER stop	"TOTAL TIME"	
 ) else (
     echo [31mBUILD FAILED. STOPPED.[0m
+	call "%~dp0timer.bat" TOTAL_TIMER stop	"TOTAL TIME"	    	
     echo press any key.
     @PAUSE >nul
     exit /b 1
 )
 
-
+:run
 :: Launch emulator if requested
 if !run! == 1 (
     @echo.
     @echo.
     echo Launching emulator...    
-    call "%~dp0run.bat"
+    call "%smd_dev_path%\devkit\emuls\run_current_emul.bat" "%~dp0out\rom.bin"
 )
 
 if !paused! == 1 (
@@ -110,19 +120,18 @@ call "%~dp0clean_files.bat" "%~dp0res" d rs
 call "%smd_dev_path%\devkit\sgdk\sgdk_current\bin\make.exe" -f "%smd_dev_path%\devkit\sgdk\sgdk_current\makefile.gen" "clean"
 set clean=0
 @echo.
-@echo.
-echo [32mClean done.[0m
-@echo.
+echo [32mClean done.[0m	
 @echo.
 if !release!==0 (goto exit)    
 goto main
 
 
-:build
+:build_single
 echo Building all single makefile...
-call "%~dp0timecmd.bat" (call "%smd_dev_path%\devkit\sgdk\sgdk_current\bin\make.exe" -f "%smd_dev_path%\devkit\sgdk\sgdk_current\makefile.gen" !args!) && (set build_result=1)
+(call "%smd_dev_path%\devkit\sgdk\sgdk_current\bin\make.exe" -f "%smd_dev_path%\devkit\sgdk\sgdk_current\makefile.gen" !args!) && (set build_result=1)
 set release=0
 if !build_result!==1 echo [32mBuilding ALL - done (one makefile)[0m
+call "%~dp0timer.bat" PASS_TIMER stop	"BUILD TIME"		
 goto main
 
 
@@ -131,6 +140,7 @@ echo Building resources separated...
 (call "%smd_dev_path%\devkit\sgdk\sgdk_current\bin\make.exe" -f "%smd_dev_path%\devkit\sgdk\sgdk_current\makefile_0.gen" !args!) && (set build_result=1)
 set res=0
 if !build_result!==1 echo [32mBuilding RES - done (separated makefile)[0m
+call "%~dp0timer.bat" PASS_TIMER stop	"Resources build time"	
 goto main
 
 
@@ -138,6 +148,6 @@ goto main
 echo Building code separated makefile...
 (call "%smd_dev_path%\devkit\sgdk\sgdk_current\bin\make.exe" -f "%smd_dev_path%\devkit\sgdk\sgdk_current\makefile_1.gen" !args!) && (set build_result=1)
 set code=0
-@echo.
 if !build_result!==1 echo [32mBuilding CODE - done (separated makefile)[0m
+call "%~dp0timer.bat" PASS_TIMER stop	"Code build time"	
 goto main
