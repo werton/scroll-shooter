@@ -8,6 +8,7 @@
 #include "player.h"
 #include "explosion.h"
 #include "resources.h"
+#include "game.h"
 
 
 void Players_Create() {
@@ -78,33 +79,6 @@ void Player_Explode(Player *player) {
 
 }
 
-
-// Check for new players joining the game
-void Player_JoinUpdate() {
-  FOREACH_PLAYER(player) {
-    switch (player->state) {
-
-        case PL_STATE_SUSPENDED:
-            if (JOY_readJoypad(player->index) & BUTTON_START) {
-                player->lives = PLAYER_LIVES;
-                player->state = PL_STATE_DIED;
-                player->respawnTimer = 0;
-                player->score = 0;
-                RenderScore(player);
-            }
-            break;
-
-        case PL_STATE_DIED:
-            if (player->respawnTimer > 0)
-                player->respawnTimer--;
-
-            if (player->respawnTimer == 0) {
-                Player_Add(player->index);
-            }
-            break;
-    }
-  }
-}
 
 // Removes a player from the game and frees its resources
 // @param player Pointer to player to remove

@@ -12,15 +12,19 @@ include_directories(c:\\Dev\\smd_dev\\devkit\\sgdk\\sgdk_current\\inc\\ext\\flas
 include_directories(c:\\Dev\\smd_dev\\devkit\\sgdk\\sgdk_current\\res)
 
 include_directories(.)
-include_directories(tile-animation)
 include_directories(inc)
 include_directories(res)
 include_directories(src)
 
 
 add_executable(
-        tile-animation
         src/main.c
         src/game_object.c
         src/game_object.h
+        src/game.c
+        src/game.h
+        src/player.c
+        src/globals.c
+        src/explosion.c
+        src/enemy.c
 )

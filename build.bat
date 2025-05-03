@@ -20,7 +20,7 @@ set sep=0
 set release=0
 set run=0
 set paused=1
-set build_result=0
+set build_result=1
 
 :: Process arguments - remove custom flag
 set args=%*
@@ -81,18 +81,17 @@ if %sep%==1 (
 	if not %release%==0 (goto build_single) else (goto run)
 )
 
-
+:result
 @echo.
 if !build_result!==1 (
 	echo [32mBuild done.[0m
-	call "%~dp0timer.bat" TOTAL_TIMER stop	"TOTAL TIME"	
+	call "%~dp0timer.bat" TOTAL_TIMER stop	"TOTAL TIME"
 ) else (
     echo [31mBUILD FAILED. STOPPED.[0m
 	call "%~dp0timer.bat" TOTAL_TIMER stop	"TOTAL TIME"	    	
-    echo press any key.
-    @PAUSE >nul
-    exit /b 1
+	set run=0		
 )
+
 
 :run
 :: Launch emulator if requested
@@ -112,7 +111,7 @@ if !paused! == 1 (
 endlocal
 exit /b 0
 
-
+::----------------------------------------------------------------------
 :clean
 :: delete .d .rs files in res folder
 call "%~dp0clean_files.bat" "%~dp0res" d rs
@@ -126,28 +125,54 @@ if !release!==0 (goto exit)
 goto main
 
 
+::----------------------------------------------------------------------
 :build_single
 echo Building all single makefile...
-(call "%smd_dev_path%\devkit\sgdk\sgdk_current\bin\make.exe" -f "%smd_dev_path%\devkit\sgdk\sgdk_current\makefile.gen" !args!) && (set build_result=1)
+call "%smd_dev_path%\devkit\sgdk\sgdk_current\bin\make.exe" -f "%smd_dev_path%\devkit\sgdk\sgdk_current\makefile.gen" !args!
+
+if !errorlevel!==0 (
+	echo [32mBuilding ALL - done [one makefile][0m
+) else (
+	echo [31mBuilding ALL - FAILED [one makefile][0m
+	set build_result=0	
+	goto result
+)
+
 set release=0
-if !build_result!==1 echo [32mBuilding ALL - done (one makefile)[0m
 call "%~dp0timer.bat" PASS_TIMER stop	"BUILD TIME"		
 goto main
 
 
+::----------------------------------------------------------------------
 :build_res
 echo Building resources separated...
-(call "%smd_dev_path%\devkit\sgdk\sgdk_current\bin\make.exe" -f "%smd_dev_path%\devkit\sgdk\sgdk_current\makefile_0.gen" !args!) && (set build_result=1)
+call "%smd_dev_path%\devkit\sgdk\sgdk_current\bin\make.exe" -f "%smd_dev_path%\devkit\sgdk\sgdk_current\makefile_0.gen" !args!
+if !errorlevel!==0 (
+	echo [32mBuilding RES - done [separated makefile][0m
+) else (
+	echo [31mBuilding RES - FAILED [separated makefile][0m
+	set build_result=0
+	goto result
+)
+
 set res=0
-if !build_result!==1 echo [32mBuilding RES - done (separated makefile)[0m
 call "%~dp0timer.bat" PASS_TIMER stop	"Resources build time"	
 goto main
 
 
+::----------------------------------------------------------------------
 :build_code
 echo Building code separated makefile...
-(call "%smd_dev_path%\devkit\sgdk\sgdk_current\bin\make.exe" -f "%smd_dev_path%\devkit\sgdk\sgdk_current\makefile_1.gen" !args!) && (set build_result=1)
+call "%smd_dev_path%\devkit\sgdk\sgdk_current\bin\make.exe" -f "%smd_dev_path%\devkit\sgdk\sgdk_current\makefile_1.gen" !args!
+
+if !errorlevel!==0 (
+	echo [32mBuilding CODE - done [separated makefile][0m
+) else (
+	echo [31mBuilding CODE - FAILED [separated makefile][0m
+	set build_result=0	
+	goto result
+)
+
 set code=0
-if !build_result!==1 echo [32mBuilding CODE - done (separated makefile)[0m
 call "%~dp0timer.bat" PASS_TIMER stop	"Code build time"	
 goto main

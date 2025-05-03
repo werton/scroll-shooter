@@ -44,8 +44,6 @@ struct Player * Player_Add(unsigned char index);
 
 void Player_Explode(Player *player);
 
-void Player_JoinUpdate();
-
 void Player_Remove(Player* player);
 
 void Player_TryShoot(Player* player);
