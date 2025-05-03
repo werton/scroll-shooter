@@ -11,7 +11,7 @@
 
 void Enemy_Spawn(s16 x, s16 y);
 
-void EnemySpawner_Set(EnemySpawner * spawner);
+void EnemySpawner_Set(EnemySpawner *spawner);
 
 void EnemySpawner_Update();
 

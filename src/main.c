@@ -27,10 +27,11 @@
 
 void Game_MainLoop();
 
-int main(bool hardReset) {
+int main(bool hardReset)
+{
     if (!hardReset)
         SYS_hardReset();
-
+    
     Game_Init();
     Game_MainLoop();
     

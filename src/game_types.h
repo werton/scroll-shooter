@@ -17,7 +17,8 @@
 
 
 // Scrolling plane configuration
-typedef struct {
+typedef struct
+{
     VDPPlane plane;         // Background plane (A or B)
     u16 startLineIndex;     // First line to apply scrolling
     u16 numOfLines;         // Number of lines to scroll
@@ -27,13 +28,13 @@ typedef struct {
 
 
 // Main game state structure
-typedef struct {
-    Player* players;
-    Player* playerListHead;              // Linked list of active players
+typedef struct
+{
+    Player *players;
+    Player *playerListHead;              // Linked list of active players
     PlaneScrollingRule scrollRules[SCROLL_PLANES]; // Background scrolling rules
     EnemyWave wave;                      // Current enemy wave state
 } GameState;
-
 
 
 #endif //HEADER_GAME_TYPES
