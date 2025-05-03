@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="CLionExternalBuildManager">
+    <target id="462d75f3-07d0-4bc2-a93f-71f10e2da6a3" name="Release, Run" defaultType="TOOL">
+      <configuration id="31db9a15-6f7b-43b3-a146-7f6b49adb698" name="Release, Run">
+        <build type="TOOL">
+          <tool actionId="Tool_External Tools_Build Release, Run" />
+        </build>
+        <clean type="TOOL">
+          <tool actionId="Tool_External Tools_Clean" />
+        </clean>
+      </configuration>
+    </target>
+    <target id="b4afb16f-8ea4-4eb1-a1db-ddc1d1ed28c9" name="Debug, Run" defaultType="TOOL">
+      <configuration id="28b7d632-8864-4021-aa73-701ef11eace2" name="Debug, Run">
+        <build type="TOOL">
+          <tool actionId="Tool_External Tools_Build Debug, Run" />
+        </build>
+        <clean type="TOOL">
+          <tool actionId="Tool_External Tools_Clean" />
+        </clean>
+      </configuration>
+    </target>
+    <target id="a79f3483-8659-4bd3-a5e5-7772d820760f" name="Release" defaultType="TOOL">
+      <configuration id="38017eb4-2abb-42f4-bcbd-7d558d7742d1" name="Release">
+        <build type="TOOL">
+          <tool actionId="Tool_External Tools_Build Release" />
+        </build>
+        <clean type="TOOL">
+          <tool actionId="Tool_External Tools_Clean" />
+        </clean>
+      </configuration>
+    </target>
+    <target id="3d13d856-d66f-4565-93b0-919895ee58cb" name="Debug" defaultType="TOOL">
+      <configuration id="a1105bc0-9478-4195-99ce-e1a4c893a7ad" name="Debug">
+        <build type="TOOL">
+          <tool actionId="Tool_External Tools_Build Debug" />
+        </build>
+        <clean type="TOOL">
+          <tool actionId="Tool_External Tools_Clean" />
+        </clean>
+      </configuration>
+    </target>
+  </component>
+</project>
