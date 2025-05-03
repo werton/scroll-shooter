@@ -6,42 +6,48 @@
 #include "defs.h"
 
 
-
 // Apply damage from one object to another
-void GameObject_ApplyDamageBy(GameObject *object1, GameObject *object2) {
-     if (object1->hp > object2->damage) {
-         object1->hp -= object2->damage;
-         SPR_setFrame(object1->sprite, DAMAGE_FRAME);
-         object1->blinkCounter = BLINK_TICKS;
-     }
-     else
+void GameObject_ApplyDamageBy(GameObject *object1, GameObject *object2)
+{
+    if (object1->hp > object2->damage)
+    {
+        object1->hp -= object2->damage;
+        SPR_setFrame(object1->sprite, DAMAGE_FRAME);
+        object1->blinkCounter = BLINK_TICKS;
+    }
+    else
         object1->hp = 0;
 }
 
 // Check and handle collision between two objects
-bool GameObject_CollisionUpdate(GameObject *object1, GameObject *object2) {
-     if (GameObject_IsCollided(object1, object2)) {
-         GameObject_ApplyDamageBy(object1, object2);
-         GameObject_ApplyDamageBy(object2, object1);
-         return TRUE;
-     }
-     return FALSE;
+bool GameObject_CollisionUpdate(GameObject *object1, GameObject *object2)
+{
+    if (GameObject_IsCollided(object1, object2))
+    {
+        GameObject_ApplyDamageBy(object1, object2);
+        GameObject_ApplyDamageBy(object2, object1);
+        return TRUE;
+    }
+    return FALSE;
 }
 
 // Initialize game object with specified parameters
 void GameObject_Init(GameObject *object, const SpriteDefinition *spriteDef, u16 pal,
-                    fix16 x, fix16 y, u16 w, u16 h, s16 hp, s16 damage) {
-    if (!object->sprite) {
+                     fix16 x, fix16 y, u16 w, u16 h, s16 hp, s16 damage)
+{
+    if (!object->sprite)
+    {
         object->sprite = SPR_addSprite(spriteDef, F16_toInt(x), F16_toInt(y),
-                                     TILE_ATTR(pal, FALSE, FALSE, FALSE));
+                                       TILE_ATTR(pal, FALSE, FALSE, FALSE));
     }
-    else {
+    else
+    {
         SPR_setPosition(object->sprite, F16_toInt(x), F16_toInt(y));
     }
-
+    
     SPR_setVisibility(object->sprite, VISIBLE);
     SPR_setAnimAndFrame(object->sprite, 0, 0);
-
+    
     object->x = x;
     object->y = y;
     object->w = w;
@@ -51,7 +57,8 @@ void GameObject_Init(GameObject *object, const SpriteDefinition *spriteDef, u16 
 }
 
 // Release game object back to pool
-void GameObject_Release(GameObject *gameObject, Pool *pool) {
+void GameObject_Release(GameObject *gameObject, Pool *pool)
+{
     SPR_setVisibility(gameObject->sprite, HIDDEN);
     POOL_release(pool, gameObject, TRUE);
 }

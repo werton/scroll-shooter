@@ -7,7 +7,7 @@ IMAGE bgImage "back.png" NONE
 SPRITE player_sprite "player.png" 4 4 NONE 5
 SPRITE enemy_sprite "enemy1.png" 4 4 NONE 0
 SPRITE bullet_sprite "bullet.png" 4 2 NONE 2
-SPRITE explosion_sprite "explosion.png" 4 4 NONE 3
+SPRITE explosion_sprite "boom.png" 4 4 NONE 3
 
 
 //------------------------------ Background map -----------------------------------------------------

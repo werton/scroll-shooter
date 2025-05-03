@@ -55,6 +55,7 @@ Player *Player_Add(u8 index)
     SPR_setAnimationLoop(player->sprite, FALSE);
     SPR_setVisibility(player->sprite, AUTO_FAST);
     
+    player->state = PL_STATE_INVINCIBLE;
     // Set invincibility for 3 seconds (50 frames per second * 3 = 150 frames)
     player->invincibleTimer = 150;
     player->isDamageable = FALSE; // Player can't take damage during invincibility
@@ -79,7 +80,6 @@ void Player_Explode(Player *player)
     
     if (player->lives == 0)
         player->state = PL_STATE_SUSPENDED;
-    
 }
 
 
@@ -112,8 +112,8 @@ void Player_TryShoot(Player *player)
     
     if (player->coolDownTicks != 0) return;
     
-    Projectile *bullet1 = (Projectile *) POOL_allocate(projectilePool);
-    Projectile *bullet2 = (Projectile *) POOL_allocate(projectilePool);
+    Projectile *bullet1 = (Projectile *) POOL_allocate(game.projectilePool);
+    Projectile *bullet2 = (Projectile *) POOL_allocate(game.projectilePool);
     
     if (bullet1)
         Projectile_Spawn(bullet1, player->x + FIX16(OBJECT_SIZE), player->y, player->index);
@@ -138,17 +138,14 @@ void Player_Update(Player *player)
         
         // Blink every 4 frames (adjust this value for different blink rates)
         if ((player->invincibleTimer % 3) == 0)
-        {
             SPR_setVisibility(player->sprite, VISIBLE);
-        }
         else
-        {
             SPR_setVisibility(player->sprite, HIDDEN);
-        }
         
         // End invincibility when timer runs out
         if (player->invincibleTimer == 0)
         {
+            player->state = PL_STATE_NORMAL;
             player->isDamageable = TRUE; // Player can now take damage
             SPR_setVisibility(player->sprite, VISIBLE); // Make sure player is visible
         }
@@ -173,14 +170,14 @@ void Player_UpdateEnemyCollision(Player *player)
     if (player->state != PL_STATE_NORMAL)
         return;
     
-    FOREACH_ALLOCATED_IN_POOL(Enemy, enemy, enemyPool)
+    FOREACH_ALLOCATED_IN_POOL(Enemy, enemy, game.enemyPool)
     {
         if (!enemy) continue;
         
         if (GameObject_CollisionUpdate((GameObject *) player, (GameObject *) enemy))
         {
             if (!enemy->hp)
-                GameObject_ReleaseWithExplode((GameObject *) enemy, enemyPool);
+                GameObject_ReleaseWithExplode((GameObject *) enemy, game.enemyPool);
             
             if (!player->hp)
             {

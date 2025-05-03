@@ -25,6 +25,33 @@
 // Function Implementations
 // =============================================
 
+// Initialize all game systems and resources
+void Game_Init()
+{
+    VDP_setScrollingMode(HSCROLL_TILE, VSCROLL_PLANE);
+    Z80_loadDriver(Z80_DRIVER_XGM2, TRUE);
+
+#if PLAY_MUSIC
+    XGM2_play(xgm2_music);
+#endif
+    
+    JOY_init();
+    SPR_init();
+    
+    VDP_drawImageEx(BG_A, &mapImage, TILE_ATTR_FULL(PAL0, FALSE, FALSE, FALSE, TILE_USER_INDEX),
+                    0, 0, TRUE, TRUE);
+    VDP_drawImageEx(BG_B, &bgImage, TILE_ATTR_FULL(PAL0, FALSE, FALSE, FALSE,
+                                                   TILE_USER_INDEX + mapImage.tileset->numTile), 0, 0, TRUE, TRUE);
+    
+    PAL_setPalette(PAL1, player_sprite.palette->data, DMA);
+    Game_ObjectsPoolsInit();
+    Players_Create();
+    Player_Add(0);
+    Game_RenderScore(&game.players[0]);
+    PAL_setPalette(PAL2, explosion_sprite.palette->data, DMA);
+    Enemies_Init();
+    EnemySpawner_Set(&game.sinSpawner);
+}
 
 
 void Game_MainLoop()
@@ -69,9 +96,9 @@ void BackgroundScroll()
         if (scrollRule->autoScrollSpeed == 0) continue;
         
         scrollRule->scrollOffset += scrollRule->autoScrollSpeed;
-        memsetU16((u16 *) lineOffsetX[ind], -FF32_toInt(scrollRule->scrollOffset), scrollRule->numOfLines);
+        memsetU16((u16 *) game.lineOffsetX[ind], -FF32_toInt(scrollRule->scrollOffset), scrollRule->numOfLines);
         
-        VDP_setHorizontalScrollTile(scrollRule->plane, scrollRule->startLineIndex, lineOffsetX[ind],
+        VDP_setHorizontalScrollTile(scrollRule->plane, scrollRule->startLineIndex, game.lineOffsetX[ind],
                                     scrollRule->numOfLines, DMA_QUEUE);
     }
 }
@@ -80,11 +107,11 @@ void BackgroundScroll()
 // Check collisions between bullets and enemies
 void Projectile_UpdateEnemyCollision()
 {
-    FOREACH_ALLOCATED_IN_POOL(Projectile, projectile, projectilePool)
+    FOREACH_ALLOCATED_IN_POOL(Projectile, projectile, game.projectilePool)
     {
         if (!projectile) continue;
         
-        FOREACH_ALLOCATED_IN_POOL(Enemy, enemy, enemyPool)
+        FOREACH_ALLOCATED_IN_POOL(Enemy, enemy, game.enemyPool)
         {
             if (!enemy) continue;
             
@@ -92,12 +119,12 @@ void Projectile_UpdateEnemyCollision()
             {
                 if (!enemy->hp)
                 {
-                    GameObject_ReleaseWithExplode((GameObject *) enemy, enemyPool);
+                    GameObject_ReleaseWithExplode((GameObject *) enemy, game.enemyPool);
                     
                     game.players[projectile->ownerIndex].score += 10;
                     Player_ScoreUpdate(&game.players[projectile->ownerIndex]);
                 }
-                GameObject_Release(projectile, projectilePool);
+                GameObject_Release(projectile, game.projectilePool);
                 break;
             }
         }
@@ -107,7 +134,7 @@ void Projectile_UpdateEnemyCollision()
 // Update all active bullets movement and boundaries
 void Projectile_Update()
 {
-    FOREACH_ALLOCATED_IN_POOL(GameObject, projectile, projectilePool)
+    FOREACH_ALLOCATED_IN_POOL(GameObject, projectile, game.projectilePool)
     {
 //        kprintf("bullet");
         if (projectile)
@@ -116,37 +143,9 @@ void Projectile_Update()
             SPR_setPosition(projectile->sprite, F16_toInt(projectile->x), F16_toInt(projectile->y));
             
             if (projectile->x > FIX16(SCREEN_WIDTH))
-                GameObject_Release(projectile, projectilePool);
+                GameObject_Release(projectile, game.projectilePool);
         }
     }
-}
-
-// Initialize all game systems and resources
-void Game_Init()
-{
-    VDP_setScrollingMode(HSCROLL_TILE, VSCROLL_PLANE);
-    Z80_loadDriver(Z80_DRIVER_XGM2, TRUE);
-
-#if PLAY_MUSIC
-    XGM2_play(xgm2_music);
-#endif
-    
-    JOY_init();
-    SPR_init();
-    
-    VDP_drawImageEx(BG_A, &mapImage, TILE_ATTR_FULL(PAL0, FALSE, FALSE, FALSE, TILE_USER_INDEX),
-                    0, 0, TRUE, TRUE);
-    VDP_drawImageEx(BG_B, &bgImage, TILE_ATTR_FULL(PAL0, FALSE, FALSE, FALSE,
-                                                   TILE_USER_INDEX + mapImage.tileset->numTile), 0, 0, TRUE, TRUE);
-    
-    PAL_setPalette(PAL1, player_sprite.palette->data, DMA);
-    Game_ObjectsPoolsInit();
-    Players_Create();
-    Player_Add(0);
-    Game_RenderScore(&game.players[0]);
-    PAL_setPalette(PAL2, explosion_sprite.palette->data, DMA);
-    Enemies_Init();
-    EnemySpawner_Set(&sinSpawner);
 }
 
 void RenderFPS()
@@ -170,6 +169,8 @@ void Game_RenderScore(Player *player)
 // Render UI messages like join prompts
 void Game_RenderMessage()
 {
+    static u16 blinkCounter;
+    
     blinkCounter++;
     
     FOREACH_PLAYER(player)
@@ -217,9 +218,9 @@ void Game_Render()
 // Initialize object pools for game entities
 void Game_ObjectsPoolsInit()
 {
-    enemyPool = POOL_create(MAX_ENEMIES, sizeof(Enemy));
-    projectilePool = POOL_create(MAX_BULLETS, sizeof(Projectile));
-    explosionPool = POOL_create(MAX_EXPLOSION, sizeof(GameObject));
+    game.enemyPool = POOL_create(MAX_ENEMIES, sizeof(Enemy));
+    game.projectilePool = POOL_create(MAX_BULLETS, sizeof(Projectile));
+    game.explosionPool = POOL_create(MAX_EXPLOSION, sizeof(GameObject));
 }
 
 // Check for new players joining the game

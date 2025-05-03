@@ -10,18 +10,34 @@
 #include "player.h"
 #include "game_types.h"
 
+// Scrolling plane configuration
+typedef struct
+{
+    VDPPlane plane;         // Background plane (A or B)
+    u16 startLineIndex;     // First line to apply scrolling
+    u16 numOfLines;         // Number of lines to scroll
+    ff32 autoScrollSpeed;   // Scrolling speed (fixed point)
+    ff32 scrollOffset;      // Current scroll offset
+} PlaneScrollingRule;
 
-// Line offset buffers for scrolling
-extern s16 lineOffsetX[SCROLL_PLANES][SCREEN_TILE_ROWS];
 
-// Enemy spawn patterns configurations
-extern const EnemySpawner lineSpawner;
-extern const EnemySpawner sinSpawner;
-extern u32 blinkCounter;
-// Pools for game objects
-extern Pool *projectilePool;
-extern Pool *enemyPool;
-extern Pool *explosionPool;
+// Main game state structure
+typedef struct
+{
+    Player *players;
+    Player *playerListHead;              // Linked list of active players
+    PlaneScrollingRule scrollRules[SCROLL_PLANES]; // Background scrolling rules
+    EnemyWave wave;                      // Current enemy wave state
+    
+    Pool *projectilePool;
+    Pool *enemyPool;
+    Pool *explosionPool;
+    
+    s16 lineOffsetX[SCROLL_PLANES][SCREEN_TILE_ROWS]; // Line offset buffers for scrolling
+    const EnemySpawner lineSpawner; // Enemy spawn patterns configurations
+    const EnemySpawner sinSpawner;
+} GameState;
+
 
 // Global game state with default values
 extern GameState game;

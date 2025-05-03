@@ -20,12 +20,9 @@
 #include "explosion.h"
 #include "resources.h"
 
-
 // =============================================
 // Main Game Loop
 // =============================================
-
-void Game_MainLoop();
 
 int main(bool hardReset)
 {
