@@ -1,0 +1,15 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"terminal.integrated.defaultProfile.windows": "Command Prompt",
+		"files.associations": {
+			"player.h": "c",
+			"types.h": "c",
+			"game_object.h": "c"
+		}
+	}
+}

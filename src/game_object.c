@@ -1,10 +1,24 @@
 //
 // Created by weerb on 02.05.2025.
 //
-
+#include <genesis.h>
 #include "game_object.h"
 #include "defs.h"
 
+// Add collision layer enum
+typedef enum {
+    COLLISION_LAYER_PLAYER = 1,
+    COLLISION_LAYER_ENEMY = 2,
+    COLLISION_LAYER_PROJECTILE = 4,
+    COLLISION_LAYER_EXPLOSION = 8
+} CollisionLayer;
+
+// Add collision mask to GameObject struct
+struct GameObject {
+    // ... existing fields ...
+    u8 collisionLayer;
+    u8 collisionMask;
+};
 
 // Apply damage from one object to another
 void GameObject_ApplyDamageBy(GameObject *object1, GameObject *object2)
@@ -63,14 +77,21 @@ void GameObject_Release(GameObject *gameObject, Pool *pool)
     POOL_release(pool, gameObject, TRUE);
 }
 
-
-// Check if two game objects are colliding
+// Optimized collision check with layers
 FORCE_INLINE bool GameObject_IsCollided(GameObject *obj1, GameObject *obj2)
 {
-    if (obj1->y > obj2->y + FIX16(obj2->h) || obj1->y + FIX16(obj1->h) < obj2->y)
+    // Check collision layers first
+    if (!(obj1->collisionMask & obj2->collisionLayer) || 
+        !(obj2->collisionMask & obj1->collisionLayer))
+        return FALSE;
+
+    // Fast AABB check with early exits
+    if (obj1->y > obj2->y + FIX16(obj2->h) || 
+        obj1->y + FIX16(obj1->h) < obj2->y)
         return FALSE;
     
-    if (obj1->x + FIX16(obj1->w) < obj2->x || obj1->x > obj2->x + FIX16(obj2->w))
+    if (obj1->x + FIX16(obj1->w) < obj2->x || 
+        obj1->x > obj2->x + FIX16(obj2->w))
         return FALSE;
     
     return TRUE;

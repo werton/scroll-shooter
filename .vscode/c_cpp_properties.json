@@ -1,0 +1,31 @@
+{
+    "configurations": [
+        {
+            "name": "sgdk",
+            "includePath": [
+                "${workspaceFolder}/../../devkit/sgdk/sgdk_current/inc/",
+                "${workspaceFolder}/../../devkit/sgdk/sgdk_current/res/",
+                "${workspaceFolder}/inc",
+                "${workspaceFolder}/res",
+                "C:/Dev/smd_dev/devkit/sgdk/sgdk_current"
+            ],
+            "cStandard": "c17",
+            "compilerArgs": [
+                "-DSGDK_GCC",
+                "-m68000",
+                "-fdiagnostics-color=always",
+                "-Wall",
+                "-Wextra",
+                "-Wno-shift-negative-value",
+                "-Wno-main",
+                "-Wno-unused-parameter",
+                "-fno-builtin",
+                "-ffunction-sections",
+                "-fdata-sections",
+                "-fms-extensions"
+            ],
+            "compilerPath": "c:\\Dev\\smd_dev\\devkit\\sgdk\\sgdk_current\\bin\\gcc"
+        }
+    ],
+    "version": 4
+}
